@@ -25,10 +25,16 @@ struct MealEditorSheetView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button("閉じる") {
+                Button {
                     onCancel()
                 }
-                .foregroundStyle(AppThemeColor.accent)
+                label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppThemeColor.accent)
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
 
                 Spacer()
 
@@ -37,7 +43,7 @@ struct MealEditorSheetView: View {
                         .font(.system(size: 17, weight: .semibold))
                     Text(targetDate.jpMonthDayWeekday)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppThemeColor.softText)
                 }
 
                 Spacer()
@@ -53,15 +59,20 @@ struct MealEditorSheetView: View {
                     sectionCard(title: "入力者") {
                         Text(currentUserName)
                             .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(AppThemeColor.accent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(AppThemeColor.support)
+                            .clipShape(Capsule())
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    sectionCard(title: "今日のごはん") {
-                        MealEditSection(title: MealTime.breakfast.rawValue, selection: $breakfast)
+                    sectionCard(title: "ごはんの予定") {
+                        MealEditSection(title: "朝ごはん", selection: $breakfast)
                         Divider()
-                        MealEditSection(title: MealTime.lunch.rawValue, selection: $lunch)
+                        MealEditSection(title: "昼ごはん", selection: $lunch)
                         Divider()
-                        MealEditSection(title: MealTime.dinner.rawValue, selection: $dinner)
+                        MealEditSection(title: "夜ごはん", selection: $dinner)
                     }
 
                     sectionCard(title: "ひとことメモ") {
@@ -69,7 +80,7 @@ struct MealEditorSheetView: View {
                             if note.isEmpty {
                                 Text("帰宅時間や連絡メモ")
                                     .font(.system(size: 16))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(AppThemeColor.softText)
                                     .padding(.top, 8)
                                     .padding(.leading, 6)
                             }
@@ -80,6 +91,13 @@ struct MealEditorSheetView: View {
                                 .scrollContentBackground(.hidden)
                                 .background(Color.clear)
                         }
+                        .padding(10)
+                        .background(Color.white.opacity(0.92))
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(AppThemeColor.support, lineWidth: 1)
+                        )
                     }
                 }
                 .padding(.horizontal, 20)
@@ -98,7 +116,7 @@ struct MealEditorSheetView: View {
                     .padding(.vertical, 16)
                     .background(AppThemeColor.accent)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
@@ -120,19 +138,25 @@ struct MealEditorSheetView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppThemeColor.softText)
 
             content()
         }
-        .padding(14)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppThemeColor.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(
+            LinearGradient(
+                colors: [Color.white, AppThemeColor.secondaryCard],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 24)
                 .stroke(AppThemeColor.support.opacity(0.9), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.05), radius: 7, x: 0, y: 2)
+        .shadow(color: AppThemeColor.accent.opacity(0.08), radius: 14, x: 0, y: 5)
     }
 
     /// 初回表示時の状態を設定します。
@@ -153,13 +177,13 @@ private struct MealEditSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(AppThemeColor.softText)
 
-            HStack(spacing: 10) {
-                statusButton(.undecided)
+            HStack(spacing: 8) {
                 statusButton(.home)
                 statusButton(.out)
+                statusButton(.undecided)
             }
         }
     }
@@ -169,10 +193,31 @@ private struct MealEditSection: View {
         Button {
             selection = status
         } label: {
-            MealStatusPill(status: status)
-                .opacity(selection == status ? 1.0 : 0.6)
+            Text(status.inputLabel)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(selection == status ? selectedFillColor(for: status) : Color.white.opacity(0.92))
+                .foregroundStyle(selection == status ? status.textColor : .secondary)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(selection == status ? status.borderColor : AppThemeColor.support, lineWidth: selection == status ? 2 : 1)
+                )
         }
         .buttonStyle(.plain)
+    }
+
+    /// 選択中の状態に合わせた背景色を返します。
+    private func selectedFillColor(for status: MealStatus) -> Color {
+        switch status {
+        case .undecided:
+            return AppThemeColor.peach.opacity(0.7)
+        case .home:
+            return AppThemeColor.mint.opacity(0.8)
+        case .out:
+            return AppThemeColor.lavender.opacity(0.8)
+        }
     }
 }
 

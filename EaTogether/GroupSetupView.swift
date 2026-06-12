@@ -11,11 +11,27 @@ import SwiftUI
 struct GroupSetupView: View {
     let onCreateGroup: (String, String) -> Void
     let onJoinGroup: (String, String) -> Void
+    let initialInviteGroupId: String
 
     @State private var mode: SetupMode = .create
     @State private var userName = ""
     @State private var inputGroupName = ""
     @State private var inputGroupId = ""
+
+    init(
+        initialInviteGroupId: String = "",
+        onCreateGroup: @escaping (String, String) -> Void,
+        onJoinGroup: @escaping (String, String) -> Void
+    ) {
+        let normalizedGroupId = initialInviteGroupId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        self.initialInviteGroupId = normalizedGroupId
+        self.onCreateGroup = onCreateGroup
+        self.onJoinGroup = onJoinGroup
+        _mode = State(initialValue: normalizedGroupId.isEmpty ? .create : .join)
+        _inputGroupId = State(initialValue: normalizedGroupId)
+    }
 
     var body: some View {
         NavigationStack {
@@ -82,6 +98,12 @@ struct GroupSetupView: View {
             .padding(20)
             .background(AppThemeColor.baseBackground)
             .navigationTitle("グループ設定")
+            .onAppear {
+                applyInviteGroupId(initialInviteGroupId)
+            }
+            .onChange(of: initialInviteGroupId) { _, newValue in
+                applyInviteGroupId(newValue)
+            }
         }
     }
 
@@ -106,6 +128,16 @@ struct GroupSetupView: View {
 
     private var trimmedGroupName: String {
         inputGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Deep Linkで受け取ったグループIDを参加フォームへ反映します。
+    private func applyInviteGroupId(_ groupId: String) {
+        let normalizedGroupId = groupId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        guard !normalizedGroupId.isEmpty else { return }
+        mode = .join
+        inputGroupId = normalizedGroupId
     }
 }
 

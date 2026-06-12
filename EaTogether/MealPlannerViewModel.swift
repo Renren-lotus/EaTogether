@@ -38,8 +38,10 @@ final class MealPlannerViewModel {
     var selectedPage: HomePage = .today
     var showingEditor = false
     var showingGroupSettings = false
+    var showingGroupInvite = false
     var editingDate = Date()
     var plans: [DayPlan] = []
+    var groupMembers: [GroupMemberEntry] = []
     var isSyncing = false
     var syncMessage = ""
 
@@ -70,6 +72,16 @@ final class MealPlannerViewModel {
         showingGroupSettings = false
     }
 
+    /// グループ共有モーダルを開きます。
+    func openGroupInvite() {
+        showingGroupInvite = true
+    }
+
+    /// グループ共有モーダルを閉じます。
+    func closeGroupInvite() {
+        showingGroupInvite = false
+    }
+
     /// リアルタイム同期を開始します。
     func startRealtimeSync(groupId: String) {
         guard !AppRuntime.isPreview else {
@@ -82,6 +94,7 @@ final class MealPlannerViewModel {
         guard !normalized.isEmpty else {
             stopRealtimeSync()
             plans = []
+            groupMembers = []
             syncMessage = ""
             return
         }
@@ -130,6 +143,11 @@ final class MealPlannerViewModel {
     func members(groupId: String, currentUserId: String, currentUserName: String) -> [GroupMember] {
         var map: [String: String] = [currentUserId: currentUserName]
 
+        let syncedMembers = groupMembers.filter { $0.groupId == groupId }
+        for member in syncedMembers {
+            map[member.memberId] = member.memberName
+        }
+
         let groupedPlans = plans.filter { $0.groupId == groupId }
         for dayPlan in groupedPlans {
             for memberPlan in dayPlan.memberPlans {
@@ -147,6 +165,39 @@ final class MealPlannerViewModel {
                 }
                 return $0.name.localizedCompare($1.name) == .orderedAscending
             }
+    }
+
+    /// 現在のユーザーをグループ参加メンバーとして登録します。
+    func registerCurrentMember(groupId: String, currentUserId: String, currentUserName: String) async {
+        rememberLocalMember(groupId: groupId, memberId: currentUserId, memberName: currentUserName)
+
+        var lastError: Error?
+        do {
+            try await syncService.upsertMember(
+                groupId: groupId,
+                memberId: currentUserId,
+                memberName: currentUserName
+            )
+        } catch {
+            lastError = error
+        }
+
+        do {
+            try await syncService.ensureTodayMemberEntry(
+                groupId: groupId,
+                memberId: currentUserId,
+                memberName: currentUserName,
+                date: Date()
+            )
+            syncMessage = ""
+        } catch {
+            syncMessage = syncFailureMessage(from: error)
+            return
+        }
+
+        if let lastError {
+            syncMessage = memberSyncFailureMessage(from: lastError)
+        }
     }
 
     /// メンバーの編集可否を判定します。
@@ -189,6 +240,56 @@ final class MealPlannerViewModel {
 
         do {
             try await syncService.upsert(entry: entry)
+            await registerCurrentMember(
+                groupId: groupId,
+                currentUserId: targetMember.memberId,
+                currentUserName: targetMember.name
+            )
+        } catch {
+            syncMessage = syncFailureMessage(from: error)
+        }
+    }
+
+    /// 家族1人分の食事状態を指定した内容へ更新します。
+    func setStatus(
+        _ status: MealStatus,
+        for memberId: String,
+        mealTime: MealTime,
+        date: Date,
+        groupId: String,
+        currentUserId: String,
+        currentUserName: String
+    ) async {
+        guard canEdit(memberId: memberId, currentUserId: currentUserId) else { return }
+
+        let targetPlan = ensurePlan(for: date, groupId: groupId, currentUserId: currentUserId, currentUserName: currentUserName)
+        var targetMember = targetPlan.memberPlans.first(where: { $0.memberId == currentUserId })
+            ?? MemberMealPlan(memberId: currentUserId, name: currentUserName)
+
+        targetMember.setStatus(status, for: mealTime)
+        targetMember.name = currentUserName
+        replaceMemberPlan(targetMember, on: targetPlan)
+        refreshLocalPlansOrder()
+
+        let entry = GroupMealEntry(
+            groupId: groupId,
+            dayKey: targetPlan.dayKey,
+            date: targetPlan.date,
+            memberId: targetMember.memberId,
+            memberName: targetMember.name,
+            breakfast: targetMember.breakfast,
+            lunch: targetMember.lunch,
+            dinner: targetMember.dinner,
+            note: targetMember.note
+        )
+
+        do {
+            try await syncService.upsert(entry: entry)
+            await registerCurrentMember(
+                groupId: groupId,
+                currentUserId: targetMember.memberId,
+                currentUserName: targetMember.name
+            )
         } catch {
             syncMessage = syncFailureMessage(from: error)
         }
@@ -233,6 +334,11 @@ final class MealPlannerViewModel {
 
         do {
             try await syncService.upsert(entry: entry)
+            await registerCurrentMember(
+                groupId: groupId,
+                currentUserId: member.memberId,
+                currentUserName: member.name
+            )
         } catch {
             syncMessage = syncFailureMessage(from: error)
         }
@@ -281,10 +387,11 @@ final class MealPlannerViewModel {
 
         do {
             let keys = weekDayKeys()
-            let entries = try await syncService.fetchEntries(groupId: groupId, dayKeys: keys)
+            let resolvedEntries = try await syncService.fetchEntries(groupId: groupId, dayKeys: keys)
+            let resolvedMembers = await fetchMembersWithoutBlockingEntries(groupId: groupId)
             guard token == syncToken else { return }
-            plans = Self.buildPlans(from: entries)
-            syncMessage = ""
+            plans = Self.buildPlans(from: resolvedEntries)
+            groupMembers = resolvedMembers
         } catch {
             guard token == syncToken else { return }
             syncMessage = syncFailureMessage(from: error)
@@ -294,10 +401,63 @@ final class MealPlannerViewModel {
     /// 同期エラーを画面に出す短い文章へ変換します。
     private func syncFailureMessage(from error: Error) -> String {
         let detail = error.localizedDescription
+        if isFirestorePermissionError(detail) {
+            return "同期に失敗しました。FirebaseのFirestoreルールを確認してください。"
+        }
         guard !detail.isEmpty else {
             return "同期に失敗しました。Firebase設定を確認してください。"
         }
         return "同期に失敗しました: \(detail)"
+    }
+
+    /// メンバー一覧だけを取得し、失敗しても食事予定の同期は止めません。
+    private func fetchMembersWithoutBlockingEntries(groupId: String) async -> [GroupMemberEntry] {
+        do {
+            let members = try await syncService.fetchMembers(groupId: groupId)
+            return members
+        } catch {
+            if syncMessage.isEmpty {
+                syncMessage = memberSyncFailureMessage(from: error)
+            }
+            return groupMembers
+        }
+    }
+
+    /// 画面上ではすぐにメンバーが見えるよう、ローカルにもメンバーを記録します。
+    private func rememberLocalMember(groupId: String, memberId: String, memberName: String) {
+        let trimmedName = memberName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !groupId.isEmpty, !memberId.isEmpty, !trimmedName.isEmpty else { return }
+
+        let entry = GroupMemberEntry(
+            groupId: groupId,
+            memberId: memberId,
+            memberName: trimmedName,
+            updatedAt: Date()
+        )
+
+        if let index = groupMembers.firstIndex(where: { $0.groupId == groupId && $0.memberId == memberId }) {
+            groupMembers[index] = entry
+        } else {
+            groupMembers.append(entry)
+        }
+    }
+
+    /// メンバー同期エラーを画面に出す短い文章へ変換します。
+    private func memberSyncFailureMessage(from error: Error) -> String {
+        let detail = error.localizedDescription
+        if isFirestorePermissionError(detail) {
+            return "メンバー同期に失敗しました。FirebaseのgroupMembersルールを確認してください。"
+        }
+        guard !detail.isEmpty else {
+            return "メンバー同期に失敗しました。Firebase設定を確認してください。"
+        }
+        return "メンバー同期に失敗しました: \(detail)"
+    }
+
+    /// Firestoreの権限エラーかどうかを判定します。
+    private func isFirestorePermissionError(_ message: String) -> Bool {
+        message.localizedCaseInsensitiveContains("permission")
+            || message.localizedCaseInsensitiveContains("insufficient")
     }
 
     /// Entry配列を日付単位の予定配列に変換します。

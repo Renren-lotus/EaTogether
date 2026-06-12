@@ -35,6 +35,8 @@ final class LocalGroupSession {
         }
     }
 
+    var pendingInviteGroupId: String = ""
+
     var isSetupCompleted: Bool {
         !currentUserName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -48,12 +50,12 @@ final class LocalGroupSession {
     private let defaults = UserDefaults.standard
 
     init() {
-        let savedUserId = defaults.string(forKey: Keys.currentUserId)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let savedName = defaults.string(forKey: Keys.currentUserName)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let savedGroupId = defaults.string(forKey: Keys.groupId)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let savedGroupName = defaults.string(forKey: Keys.groupName)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let resolvedUserId = DeviceUserIdentifier.current(defaults: defaults)
 
-        currentUserId = savedUserId.isEmpty ? UUID().uuidString : savedUserId
+        currentUserId = resolvedUserId
         currentUserName = savedName
         groupId = savedGroupId
         groupName = savedGroupName
@@ -75,11 +77,35 @@ final class LocalGroupSession {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
         self.groupName = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        pendingInviteGroupId = ""
+    }
+
+    /// Deep Linkで受け取ったグループへ参加します。
+    func joinGroupFromInvite(groupId: String) {
+        let normalizedGroupId = groupId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        guard !normalizedGroupId.isEmpty else { return }
+
+        if currentUserName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            pendingInviteGroupId = normalizedGroupId
+            clearGroup()
+            return
+        }
+
+        self.groupId = normalizedGroupId
+        groupName = ""
+        pendingInviteGroupId = ""
     }
 
     /// 表示用グループ名を更新します。
     func updateGroupName(_ groupName: String) {
         self.groupName = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 表示用ユーザー名を更新します。
+    func updateUserName(_ userName: String) {
+        currentUserName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// グループ参加状態だけを解除します。

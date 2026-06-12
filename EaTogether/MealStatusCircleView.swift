@@ -40,7 +40,18 @@ struct MealStatusPill: View {
 }
 
 /// MealStatusに表示用スタイルを追加します。
-private extension MealStatus {
+extension MealStatus {
+    var inputLabel: String {
+        switch self {
+        case .undecided:
+            return "未定"
+        case .home:
+            return "いる"
+        case .out:
+            return "いらない"
+        }
+    }
+
     var displayLabel: String {
         switch self {
         case .undecided:

@@ -15,11 +15,27 @@
 /* Begin PBXFileReference section */
 		A52DDBD42FCFDEE6002E06C6 /* EaTogether.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EaTogether.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A52DDBE22FCFDEFD002E06C6 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
+		A5A2E2D72FD56FFE009F5CAD /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		A5A2E2D92FD56FFE009F5CAD /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		A5A2E2F22FD5790A009F5CAD /* EaTogetherWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EaTogetherWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A503BED42FD6D90300745013 /* Exceptions for "EaTogether" folder in "EaTogether" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A52DDBD32FCFDEE6002E06C6 /* EaTogether */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A52DDBD62FCFDEE6002E06C6 /* EaTogether */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A503BED42FD6D90300745013 /* Exceptions for "EaTogether" folder in "EaTogether" target */,
+			);
 			path = EaTogether;
 			sourceTree = "<group>";
 		};
@@ -41,7 +57,9 @@
 		A52DDBCB2FCFDEE6002E06C6 = {
 			isa = PBXGroup;
 			children = (
+				A5A2E2F22FD5790A009F5CAD /* EaTogetherWidgetExtension.entitlements */,
 				A52DDBD62FCFDEE6002E06C6 /* EaTogether */,
+				A5A2E2D62FD56FFE009F5CAD /* Frameworks */,
 				A52DDBD52FCFDEE6002E06C6 /* Products */,
 				A52DDBE22FCFDEFD002E06C6 /* AGENTS.md */,
 			);
@@ -53,6 +71,15 @@
 				A52DDBD42FCFDEE6002E06C6 /* EaTogether.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A5A2E2D62FD56FFE009F5CAD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A5A2E2D72FD56FFE009F5CAD /* WidgetKit.framework */,
+				A5A2E2D92FD56FFE009F5CAD /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -267,13 +294,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EaTogether/EaTogether.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 2K446D59RQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EaTogether/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -283,7 +313,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = app.Sakashita.Renren.lit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -303,13 +333,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EaTogether/EaTogether.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 2K446D59RQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EaTogether/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -319,7 +352,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = app.Sakashita.Renren.lit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
